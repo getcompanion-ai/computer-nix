@@ -1,26 +1,21 @@
-# Computer Nix
+## Computer Nix
 
-Template for spinning up a reproducible dev environment on any ephemeral computer.
+<img width="3598" height="1184" alt="Gemini_Generated_Image_d10lsxd10lsxd10l" src="https://github.com/user-attachments/assets/332ca256-2707-46af-b593-e5e3071a2263" />
 
-A minimal home-manager flake and a justfile with four commands.
-Fork it, set your defaults, point it at any machine provisioned by the [computer CLI](https://agentcomputer.ai).
+A minimal home-manager flake and a justfile for running machines on [computer CLI](https://agentcomputer.ai).
 
 The flake composes home-manager on `x86_64-linux` only.
-Global username, flake ref, clone path, and box size are encoded in `.env` so leaf modules never need ad hoc checks.
 
-The machine surface is `home/packages.nix`: shell, search, editor, git, secrets.
-Each entry is one line with at most one comment.
-
-Neovim is sourced from an upstream flake input at `config/nvim`.
-Zsh, prompt, and aliases are owned by this repo.
-Pure-prompt drives the prompt with a small hardcoded dark palette.
+Global username, flake ref, clone path, and box size are encoded in .env
 
 Secrets live in Bitwarden and are rendered at `just secrets` time using the `bw` cli on the laptop.
+
 The box never unlocks your vault.
 
 Repos clone into `~/Documents/github` on the box, matching the laptop layout.
 
 Claude and Codex are preinstalled on the computer image.
+
 `just agent` copies local credentials onto the box via `computer claude-login` and `computer codex-login`.
 
 Deployment is `just switch <handle>` for first-time setup and reapply.
