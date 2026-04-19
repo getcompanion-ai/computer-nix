@@ -25,16 +25,37 @@ remote '
     || echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 
   # The box has no systemd, so the installer was run with --init none and
-  # nix-daemon is not started automatically. Start it in the background and
-  # wait for its socket to appear before continuing.
-  if ! pgrep -x nix-daemon >/dev/null 2>&1; then
-    echo "starting nix-daemon"
-    sudo -n nohup /nix/var/nix/profiles/default/bin/nix-daemon >/tmp/nix-daemon.log 2>&1 &
-    disown || true
-    for i in 1 2 3 4 5 6 7 8 9 10; do
-      [ -S /nix/var/nix/daemon-socket/socket ] && break
+  # no daemon is started automatically. Two flavors of installer exist on
+  # these images:
+  #   * classic nix-daemon at /nix/var/nix/profiles/default/bin/nix-daemon
+  #   * Determinate Nix (determinate-nixd at /usr/local/bin/determinate-nixd)
+  # Detect which one is available and launch it. The socket path exists on
+  # both, so we probe by actually talking to the daemon.
+  daemon_up() {
+    [ -S /nix/var/nix/daemon-socket/socket ] || return 1
+    # `nix store ping` returns 0 only if the daemon is actually listening.
+    nix store ping >/dev/null 2>&1
+  }
+
+  if ! daemon_up; then
+    echo "starting nix daemon"
+    if command -v determinate-nixd >/dev/null 2>&1; then
+      sudo -n sh -c "nohup determinate-nixd daemon >/tmp/nix-daemon.log 2>&1 &"
+    elif [ -x /nix/var/nix/profiles/default/bin/nix-daemon ]; then
+      sudo -n sh -c "nohup /nix/var/nix/profiles/default/bin/nix-daemon >/tmp/nix-daemon.log 2>&1 &"
+    else
+      echo "no nix daemon binary found" >&2; exit 1
+    fi
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+      daemon_up && break
       sleep 1
     done
+    if ! daemon_up; then
+      echo "nix daemon failed to come up. last log:" >&2
+      tail -40 /tmp/nix-daemon.log >&2 || true
+      exit 1
+    fi
+    echo "nix daemon is up"
   fi
 '
 
@@ -42,9 +63,7 @@ echo "==> applying home-manager flake"
 remote "
   set -e
   export PATH=\"\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:\$PATH\"
-  # --no-write-lock-file is required because the flake source lives in the
-  # read-only nix store; --refresh would otherwise fail trying to rewrite it.
-  nix --log-format raw run nixpkgs#home-manager -- switch --flake '${flake_ref}' -b backup --refresh --no-write-lock-file
+  nix --log-format bar-with-logs run nixpkgs#home-manager -- switch --flake '${flake_ref}' -b backup --refresh --no-write-lock-file
 "
 
 echo "==> done. connect with: computer ssh $handle --tmux"
