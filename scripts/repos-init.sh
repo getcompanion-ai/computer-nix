@@ -5,16 +5,18 @@ set -euo pipefail
 
 out="${1:-repos.json}"
 
-if [[ -f "$out" ]]; then
-  echo "$out already exists. delete or pass a different path." >&2; exit 1
-fi
 for t in gum jq gh; do
   command -v "$t" >/dev/null || { echo "$t required" >&2; exit 1; }
 done
 gh auth status >/dev/null 2>&1 || { echo "gh not authenticated. run gh auth login" >&2; exit 1; }
 
-root="$(gum input --placeholder '~/work' --prompt 'clone root on box: ')"
-root="${root:-~/work}"
+# Default the clone root to whatever was used last time, else ~/work.
+prev_root="~/work"
+if [[ -f "$out" ]]; then
+  prev_root="$(jq -r '.root // "~/work"' "$out" 2>/dev/null || echo '~/work')"
+fi
+root="$(gum input --placeholder "$prev_root" --value "$prev_root" --prompt 'clone root on box: ')"
+root="${root:-$prev_root}"
 
 echo "==> listing your repos via gh (up to 200)..."
 # Collect: name_with_owner, default branch, pushed at (ISO).
@@ -28,11 +30,30 @@ fi
 # Sort by pushedAt desc so recently-used repos float to the top.
 labels="$(printf '%s\n' "$repos_tsv" | sort -t$'\t' -k3,3r | awk -F'\t' '{print $1"  ("$2")"}')"
 
+# Pre-select anything that was in the previous repos.json so deploys stay
+# sticky unless you uncheck. Match on "owner/name" prefix of the label.
+preselected=""
+if [[ -f "$out" ]]; then
+  prev="$(jq -r '.repos[]?.repo' "$out" 2>/dev/null || true)"
+  if [[ -n "$prev" ]]; then
+    while IFS= read -r line; do
+      repo="${line%%  *}"
+      if grep -Fxq "$repo" <<<"$prev"; then
+        preselected="${preselected:+$preselected,}$line"
+      fi
+    done <<<"$labels"
+  fi
+fi
+
 selected="$(
   printf '%s\n' "$labels" \
-    | gum choose --no-limit \
-        --header "select repos to pre-clone on every box (enter confirms)" \
+    | gum filter --no-limit \
+        --placeholder "type to search · tab toggles · enter confirms" \
         --height 20 \
+        --indicator "›" \
+        --selected-prefix " ✓ " \
+        --unselected-prefix "   " \
+        ${preselected:+--selected "$preselected"} \
     || true
 )"
 

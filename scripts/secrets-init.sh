@@ -7,8 +7,7 @@ set -euo pipefail
 out="${1:-secrets.json}"
 
 if [[ -f "$out" ]]; then
-  echo "$out already exists. delete it or pass a different path to regenerate." >&2
-  exit 1
+  echo "$out already exists — regenerating (old file will be overwritten)."
 fi
 
 if ! command -v gum >/dev/null; then
@@ -126,10 +125,13 @@ while IFS=$'\t' read -r _type label _spec; do labels+=("$label"); done <"$candid
 
 selected="$(
   printf '%s\n' "${labels[@]}" \
-    | gum choose --no-limit \
-        --header "select which candidates to include in secrets.json" \
+    | gum filter --no-limit \
+        --placeholder "type to search · tab toggles · enter confirms" \
         --selected "$(IFS=,; echo "${labels[*]}")" \
         --height 20 \
+        --indicator "›" \
+        --selected-prefix " ✓ " \
+        --unselected-prefix "   " \
     || true
 )"
 

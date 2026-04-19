@@ -3,24 +3,50 @@ set dotenv-load := true
 default:
   @just --list
 
-# One-shot: bootstrap + gh auth + secrets + repos + agent creds
-go handle='':
+# One-shot onboarding: pick box once, idempotent. Repos always prompts. Pass 'force' to redo.
+go handle='' mode='':
   #!/usr/bin/env bash
   set -euo pipefail
   h="$(./scripts/pick-handle.sh '{{ handle }}')"
-  echo "==> [1/5] switch"
+  force=""
+  if [[ '{{ mode }}' == "force" ]]; then force=1; fi
+  marker_dir='~/.cache/computer-nix'
+  done_on_box() { computer ssh "$h" -- "test -f ${marker_dir}/$1.done" >/dev/null 2>&1; }
+  mark_done()   { computer ssh "$h" -- "mkdir -p ${marker_dir} && touch ${marker_dir}/$1.done" >/dev/null; }
+  if [[ -n "$force" ]]; then
+    echo "==> force: wiping markers on $h"
+    computer ssh "$h" -- "rm -rf ${marker_dir}" >/dev/null || true
+  fi
+
+  echo "==> [1/5] switch (home-manager apply)"
   ./scripts/bootstrap.sh "$h"
+
   echo "==> [2/5] gh auth"
-  ./scripts/auth-apply.sh "$h"
+  if done_on_box auth; then echo "     already done — skipping (pass 'force' to redo)"
+  else ./scripts/auth-apply.sh "$h" && mark_done auth; fi
+
   echo "==> [3/5] secrets"
-  if [[ -f secrets.json ]]; then ./scripts/secrets-apply.sh "$h"
-  else echo "     (no secrets.json — skipping; run: just secrets-init)"; fi
-  echo "==> [4/5] repos"
-  if [[ -f repos.json ]]; then ./scripts/repos-apply.sh "$h"
-  else echo "     (no repos.json — skipping; run: just repos-init)"; fi
-  echo "==> [5/5] agent creds (claude + codex)"
-  computer claude-login "$h" || true
-  computer codex-login  "$h" || true
+  if done_on_box secrets; then echo "     already done — skipping (pass 'force' to redo)"
+  else
+    if [[ ! -f secrets.json ]]; then
+      echo "     no secrets.json yet — launching picker"
+      ./scripts/secrets-init.sh
+    fi
+    ./scripts/secrets-apply.sh "$h" && mark_done secrets
+  fi
+
+  echo "==> [4/5] agent creds (claude + codex)"
+  if done_on_box agent; then echo "     already done — skipping (pass 'force' to redo)"
+  else
+    computer claude-login "$h" || true
+    computer codex-login  "$h" || true
+    mark_done agent
+  fi
+
+  echo "==> [5/5] repos (pick for this box)"
+  ./scripts/repos-init.sh
+  ./scripts/repos-apply.sh "$h"
+
   echo
   echo "==> done. ssh in with: computer ssh $h"
 
