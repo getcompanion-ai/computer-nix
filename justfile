@@ -48,7 +48,8 @@ go handle='' mode='':
   ./scripts/repos-apply.sh "$h"
 
   echo
-  echo "==> done. ssh in with: computer ssh $h"
+  echo "==> done. connecting to $h..."
+  exec computer ssh "$h"
 
 # Apply the flake to a computer
 switch handle='':
