@@ -14,6 +14,7 @@
     ./eza.nix
     ./lazygit.nix
     ./ssh.nix
+    ./skills.nix
   ];
 
   home.username = username;
