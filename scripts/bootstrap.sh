@@ -60,10 +60,32 @@ remote '
 '
 
 echo "==> applying home-manager flake"
+# Snapshot the current generation path before the apply so we can tell if a
+# new one got produced even if ssh drops its connection on the way out.
+before="$(remote 'readlink -f ~/.local/state/nix/profiles/home-manager 2>/dev/null || echo none' 2>/dev/null | tr -d '\r' || echo none)"
+
+hm_rc=0
 remote "
   set -e
   export PATH=\"\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:\$PATH\"
   nix --log-format bar-with-logs run nixpkgs#home-manager -- switch --flake '${flake_ref}' -b backup --refresh --no-write-lock-file
-"
+" || hm_rc=$?
+
+# ssh sometimes exits 255 after home-manager finishes cleanly (control socket
+# teardown, idle timeout, etc.). Confirm success by checking whether a new
+# home-manager generation was produced.
+after="$(remote 'readlink -f ~/.local/state/nix/profiles/home-manager 2>/dev/null || echo none' 2>/dev/null | tr -d '\r' || echo none)"
+
+if [[ "$hm_rc" -eq 0 ]]; then
+  :
+elif [[ "$after" != "none" && "$after" != "$before" ]]; then
+  echo "==> home-manager succeeded (ssh dropped on exit, but a new generation was created)"
+elif [[ "$hm_rc" -eq 255 && "$after" == "$before" && "$after" != "none" ]]; then
+  # Pure no-op reapply where ssh dropped. Fine.
+  echo "==> home-manager was already up to date"
+else
+  echo "==> home-manager failed (exit $hm_rc, no new generation)" >&2
+  exit "$hm_rc"
+fi
 
 echo "==> done. connect with: computer ssh $handle --tmux"

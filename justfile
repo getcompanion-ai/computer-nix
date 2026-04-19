@@ -45,8 +45,12 @@ go handle='' mode='':
   if done_on_box agent; then
     skip "4/5" "agent creds (claude + codex)"
   else
-    step "4/5" "claude login" computer claude-login "$h"
-    step "4/5" "codex login"  computer codex-login  "$h"
+    # Auth flows are interactive (OAuth / device code) — run them directly,
+    # no spinner wrapper, so the TTY is available for prompts.
+    echo "  [4/5] claude login..."
+    computer claude-login --computer "$h"
+    echo "  [4/5] codex login..."
+    computer codex-login  --computer "$h"
     mark_done agent
   fi
 
