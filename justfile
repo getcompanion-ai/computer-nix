@@ -13,39 +13,46 @@ go handle='' mode='':
   marker_dir='~/.cache/computer-nix'
   done_on_box() { computer ssh "$h" -- "test -f ${marker_dir}/$1.done" >/dev/null 2>&1; }
   mark_done()   { computer ssh "$h" -- "mkdir -p ${marker_dir} && touch ${marker_dir}/$1.done" >/dev/null; }
+  step()        { ./scripts/run-step.sh "$@"; }
+  skip()        { printf '  \033[90m·\033[0m [%s] %s · skipped\n' "$1" "$2"; }
+
+  echo "==> onboarding $h"
   if [[ -n "$force" ]]; then
-    echo "==> force: wiping markers on $h"
-    computer ssh "$h" -- "rm -rf ${marker_dir}" >/dev/null || true
+    echo "    force: wiping markers on $h"
+    computer ssh "$h" -- "rm -rf ${marker_dir}" >/dev/null 2>&1 || true
   fi
 
-  echo "==> [1/5] switch (home-manager apply)"
-  ./scripts/bootstrap.sh "$h"
+  step "1/5" "switch (home-manager)" ./scripts/bootstrap.sh "$h"
 
-  echo "==> [2/5] gh auth"
-  if done_on_box auth; then echo "     already done — skipping (pass 'force' to redo)"
-  else ./scripts/auth-apply.sh "$h" && mark_done auth; fi
+  if done_on_box auth; then
+    skip "2/5" "gh auth"
+  else
+    step "2/5" "gh auth" ./scripts/auth-apply.sh "$h"
+    mark_done auth
+  fi
 
-  echo "==> [3/5] secrets"
-  if done_on_box secrets; then echo "     already done — skipping (pass 'force' to redo)"
+  if done_on_box secrets; then
+    skip "3/5" "secrets"
   else
     if [[ ! -f secrets.json ]]; then
-      echo "     no secrets.json yet — launching picker"
+      echo "    no secrets.json yet — launching picker"
       ./scripts/secrets-init.sh
     fi
-    ./scripts/secrets-apply.sh "$h" && mark_done secrets
+    step "3/5" "secrets" ./scripts/secrets-apply.sh "$h"
+    mark_done secrets
   fi
 
-  echo "==> [4/5] agent creds (claude + codex)"
-  if done_on_box agent; then echo "     already done — skipping (pass 'force' to redo)"
+  if done_on_box agent; then
+    skip "4/5" "agent creds (claude + codex)"
   else
-    computer claude-login "$h" || true
-    computer codex-login  "$h" || true
+    step "4/5" "claude login" computer claude-login "$h"
+    step "4/5" "codex login"  computer codex-login  "$h"
     mark_done agent
   fi
 
-  echo "==> [5/5] repos (pick for this box)"
+  echo "    picking repos..."
   ./scripts/repos-init.sh
-  ./scripts/repos-apply.sh "$h"
+  step "5/5" "clone repos" ./scripts/repos-apply.sh "$h"
 
   echo
   echo "==> done. connecting to $h..."
@@ -94,6 +101,6 @@ agent handle='':
   h="$(./scripts/pick-handle.sh '{{ handle }}')"
   ./scripts/pick-agent.sh "$h"
 
-# Create a new computer using COMPUTER_SIZE from .env
+# Create a new computer using COMPUTER_SIZE + COMPUTER_DISK_GIB from .env
 create handle:
-  computer create --size ${COMPUTER_SIZE} {{ handle }}
+  computer create --size ${COMPUTER_SIZE} --storage ${COMPUTER_DISK_GIB:-30} {{ handle }}
