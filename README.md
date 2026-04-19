@@ -43,7 +43,7 @@ Any command that targets a box takes a `<handle>` or prompts an fzf picker over 
 
 ## Forking
 
-See [docs/forking.md](docs/forking.md) for the repo layout and where to change what.
+See [forking.md](forking.md) for the walkthrough, repo layout, and where to change what.
 
 ## Prereqs
 

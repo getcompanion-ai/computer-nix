@@ -1,6 +1,71 @@
 # Forking
 
-This doc is the technical map of the repo so you know what to touch when you adapt it.
+Technical map of the repo so you know what to touch when you adapt it. Also: zero-to-box walkthrough and pointers for running home-manager on your Mac / KVM host.
+
+<img width="600" alt="terminal screenshot" src="https://github.com/user-attachments/assets/e4dfe881-6999-4dc6-b762-d164e99fdd79" />
+
+## Zero to a working box
+
+### 1. Install prereqs
+
+```
+curl -fsSL https://agentcomputer.ai/install.sh | bash
+brew install just gum jq fzf gh     # or your package manager
+brew install bitwarden-cli          # optional, only if you use bw for secrets
+gh auth login
+computer login
+```
+
+### 2. Fork the template
+
+```
+gh repo create my-computer-nix --template getcompanion-ai/computer-nix --public --clone
+cd my-computer-nix
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```
+FLAKE_REF=github:<you>/my-computer-nix#computer
+COMPUTER_SIZE=ram-4g
+```
+
+Commit and push — `FLAKE_REF` must resolve over the network:
+
+```
+git add . && git commit -m "init" && git push
+```
+
+### 3. Create a box, onboard, connect
+
+```
+just create mybox
+just go mybox
+computer ssh mybox --tmux
+```
+
+`just go` runs the full flow, idempotently per-box:
+
+1. **switch** — installs Nix (Determinate installer) if missing, starts `nix-daemon`, runs `home-manager switch --flake $FLAKE_REF`. Cheap on re-run.
+2. **auth** — pipes your laptop's `gh auth token` over stdin into `gh auth login --with-token` on the box, then `gh auth setup-git`. Skipped if already done.
+3. **secrets** — if `./secrets.json` is missing, launches a `gum` fuzzy multi-select picker that discovers candidates from Bitwarden, env vars, and well-known config files. `secrets-apply.sh` then resolves every entry and pushes `~/.config/secrets/shell.zsh` (mode 0600) to the box. Skipped if already done.
+4. **agent creds** — `computer claude-login` + `computer codex-login`. Skipped if already done.
+5. **repos** — always launches the `gum` fuzzy picker over `gh repo list`. Previously-picked repos are pre-selected. Clones into the configured root.
+
+Idempotency markers live at `~/.cache/computer-nix/*.done` on the box. Redo everything with `just go mybox force`.
+
+### Iterating on the flake
+
+Edit any `home/*.nix`, push to your fork, `just switch mybox`. The box fetches the new flake and reapplies.
+
+For iteration without pushing:
+
+```
+computer sync ./ --computer mybox
+computer ssh mybox -- 'nix run nixpkgs#home-manager -- switch \
+  --flake path:/home/node/computer-nix#computer -b backup --no-write-lock-file'
+```
 
 ## Repo tree
 
@@ -12,6 +77,7 @@ This doc is the technical map of the repo so you know what to touch when you ada
 ├── skills.nix                 declarative list of agent skills installed on the box
 ├── secrets.example.json       schema for ./secrets.json (gitignored by default)
 ├── repos.example.json         schema for ./repos.json   (gitignored by default)
+├── forking.md                 this file
 │
 ├── home/                      home-manager modules — one per concern
 │   ├── default.nix            imports every other module here
@@ -31,22 +97,18 @@ This doc is the technical map of the repo so you know what to touch when you ada
 │   └── skills.nix             reads ../skills.nix and runs `npx skills add`
 │                              during activation (content-addressed stamp)
 │
-├── scripts/                   implementation behind the justfile
-│   ├── bootstrap.sh           installs Nix, starts nix-daemon, runs home-manager switch
-│   ├── pick-handle.sh         fzf over `computer ls` (tempfile-staged, TTY-safe)
-│   ├── auth-apply.sh          pipes `gh auth token` into `gh auth login --with-token` on box
-│   ├── secrets-init.sh        gum fuzzy multi-select → writes ./secrets.json
-│   ├── secrets-apply.sh       reads ./secrets.json, resolves bw/env/gh-cli,
-│   │                          renders shell.zsh (0600), syncs to the box
-│   ├── repos-init.sh          gum fuzzy multi-select over `gh repo list` → ./repos.json
-│   ├── repos-apply.sh         clone-or-fast-forward every entry in ./repos.json
-│   ├── pick-agent.sh          fzf pick claude/codex/both → `computer {claude,codex}-login`
-│   ├── pick-repos.sh          legacy fzf picker (pre-declarative; still works)
-│   └── pick-secrets.sh        legacy fzf picker (pre-declarative; still works)
-│
-└── docs/
-    ├── forking.md             this file
-    └── walkthrough.md         zero-to-box with explanation of each step
+└── scripts/                   implementation behind the justfile
+    ├── bootstrap.sh           installs Nix, starts nix-daemon, runs home-manager switch
+    ├── pick-handle.sh         fzf over `computer ls` (tempfile-staged, TTY-safe)
+    ├── auth-apply.sh          pipes `gh auth token` into `gh auth login --with-token` on box
+    ├── secrets-init.sh        gum fuzzy multi-select → writes ./secrets.json
+    ├── secrets-apply.sh       reads ./secrets.json, resolves bw/env/gh-cli,
+    │                          renders shell.zsh (0600), syncs to the box
+    ├── repos-init.sh          gum fuzzy multi-select over `gh repo list` → ./repos.json
+    ├── repos-apply.sh         clone-or-fast-forward every entry in ./repos.json
+    ├── pick-agent.sh          fzf pick claude/codex/both → `computer {claude,codex}-login`
+    ├── pick-repos.sh          legacy fzf picker (pre-declarative; still works)
+    └── pick-secrets.sh        legacy fzf picker (pre-declarative; still works)
 ```
 
 ## What to change for a fork
@@ -131,3 +193,12 @@ inputs.nvim-config = {
 1. Write `scripts/<step>-apply.sh` taking `<handle>` as `$1`.
 2. Add a recipe to the justfile that calls it via `pick-handle.sh`.
 3. If it's expensive and one-shot, wire it into `just go` behind a marker check (`done_on_box <step>` / `mark_done <step>`). If it's per-task (like repos), call it unconditionally.
+
+## Running home-manager on your Mac or KVM host
+
+This repo is scoped to `x86_64-linux` boxes. If you want the same tools + dotfiles on your Mac or a local KVM VM, see [harivansh-afk/nix](https://github.com/harivansh-afk/nix) — it shares the same home-manager modules and nvim config across:
+
+- **macOS (darwin)** via `nix-darwin` + `home-manager`
+- **Linux (KVM / bare metal)** via NixOS + `home-manager`
+
+The general pattern: point both repos at the same `nvim-config` flake input, and share `home/*.nix` modules by importing them from a common place (or vendoring them). Platform-specific bits (`programs.foo` that only exists on Linux) live behind `lib.mkIf pkgs.stdenv.isLinux`.
