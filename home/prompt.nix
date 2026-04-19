@@ -24,8 +24,8 @@
     zstyle ':prompt:pure:prompt:success'  color '#9ece6a'
     zstyle ':prompt:pure:prompt:error'    color '#f7768e'
     zstyle ':prompt:pure:execution_time'  color '#565f89'
-    zstyle ':prompt:pure:host'            color '#7dcfff'
-    zstyle ':prompt:pure:user'            color '#7dcfff'
+    zstyle ':prompt:pure:host'            color '#89ddff'
+    zstyle ':prompt:pure:user'            color '#89ddff'
     zstyle ':prompt:pure:user:root'       color '#f7768e'
 
     typeset -g prompt_newline=' '
