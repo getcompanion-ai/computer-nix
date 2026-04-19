@@ -4,6 +4,9 @@
 
 A minimal home-manager flake and a justfile for running machines on [computer CLI](https://agentcomputer.ai).
 
+<img width="600" height="400" alt="image" src="https://github.com/user-attachments/assets/e4dfe881-6999-4dc6-b762-d164e99fdd79" />
+
+
 The flake composes home-manager on `x86_64-linux` only.
 
 Global username, flake ref, clone path, and box size are encoded in .env
