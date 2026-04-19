@@ -78,6 +78,10 @@
       prompt_pure_state[version]="$pure_version"
       prompt_pure_state+=(username "$username" prompt "''${PURE_PROMPT_SYMBOL:-❯}")
     }
+    # Ensure prompt_pure_colors is populated from zstyles before our override
+    # reads it; otherwise the first render captures the pristine defaults
+    # (e.g. `host=242`) and emits a malformed %F{...} sequence.
+    prompt_pure_set_colors
     prompt_pure_state_setup
 
     prompt_pure_preprompt_render() {
