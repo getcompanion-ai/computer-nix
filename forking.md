@@ -71,44 +71,12 @@ computer ssh mybox -- 'nix run nixpkgs#home-manager -- switch \
 
 ```
 .
-├── flake.nix                  home-manager + nvim-config inputs, x86_64-linux only
-├── justfile                   all user-facing commands; `just go` is the entrypoint
-├── .env.example               FLAKE_REF, COMPUTER_SIZE
-├── skills.nix                 declarative list of agent skills installed on the box
-├── secrets.example.json       schema for ./secrets.json (gitignored by default)
-├── repos.example.json         schema for ./repos.json   (gitignored by default)
-├── forking.md                 this file
-│
-├── home/                      home-manager modules — one per concern
-│   ├── default.nix            imports every other module here
-│   ├── packages.nix           tools installed into $PATH
-│   ├── aliases.nix            shell aliases
-│   ├── zsh.nix                zsh config, sources ~/.config/secrets/shell.zsh
-│   ├── prompt.nix             pure-prompt colors + eager SSH color resolution
-│   ├── nvim.nix               programs.neovim, pulls ${inputs.nvim-config}/config/nvim
-│   ├── git.nix                programs.git + programs.delta
-│   ├── gh.nix                 gh binary; config.yml seeded writable (not a Nix symlink)
-│   ├── ssh.nix                SSH client defaults (matchBlocks."*")
-│   ├── tmux.nix               tmux
-│   ├── fzf.nix                fzf
-│   ├── bat.nix                bat
-│   ├── eza.nix                eza (icons=never for broad terminal compat)
-│   ├── lazygit.nix            lazygit
-│   └── skills.nix             reads ../skills.nix and runs `npx skills add`
-│                              during activation (content-addressed stamp)
-│
-└── scripts/                   implementation behind the justfile
-    ├── bootstrap.sh           installs Nix, starts nix-daemon, runs home-manager switch
-    ├── pick-handle.sh         fzf over `computer ls` (tempfile-staged, TTY-safe)
-    ├── auth-apply.sh          pipes `gh auth token` into `gh auth login --with-token` on box
-    ├── secrets-init.sh        gum fuzzy multi-select → writes ./secrets.json
-    ├── secrets-apply.sh       reads ./secrets.json, resolves bw/env/gh-cli,
-    │                          renders shell.zsh (0600), syncs to the box
-    ├── repos-init.sh          gum fuzzy multi-select over `gh repo list` → ./repos.json
-    ├── repos-apply.sh         clone-or-fast-forward every entry in ./repos.json
-    ├── pick-agent.sh          fzf pick claude/codex/both → `computer {claude,codex}-login`
-    ├── pick-repos.sh          legacy fzf picker (pre-declarative; still works)
-    └── pick-secrets.sh        legacy fzf picker (pre-declarative; still works)
+├── flake.nix            flake inputs + homeConfigurations.computer
+├── home/                home-manager modules (programs.*, xdg, activation)
+│   └── default.nix      imports every sibling module
+├── skills.nix           declarative agent-skills manifest
+├── justfile             user-facing commands; `just go` is the entrypoint
+└── scripts/             bash implementing each justfile recipe
 ```
 
 ## What to change for a fork
