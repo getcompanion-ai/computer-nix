@@ -2,7 +2,7 @@
   programs.eza = {
     enable = true;
     enableZshIntegration = false;
-    icons = "auto";
+    icons = "never";
     git = true;
   };
 }
