@@ -1,0 +1,16 @@
+{
+  "$comment": "Declarative list of git repos to clone onto the box. Copy to repos.json (or run `just repos-init`) and edit.",
+  "root": "~/work",
+  "repos": [
+    {
+      "repo": "getcompanion-ai/computer-nix",
+      "branch": "main"
+    },
+    {
+      "repo": "getcompanion-ai/some-other-repo",
+      "dest": "~/work/other",
+      "branch": "main",
+      "depth": 1
+    }
+  ]
+}

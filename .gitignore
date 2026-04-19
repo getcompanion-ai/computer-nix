@@ -3,3 +3,7 @@ result
 result-*
 .direnv
 .DS_Store
+
+# user-specific manifests (each user fills these in on their fork/checkout)
+secrets.json
+repos.json
