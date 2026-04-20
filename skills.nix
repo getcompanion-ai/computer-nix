@@ -15,24 +15,8 @@
       source = "https://github.com/vercel-labs/skills";
     }
     {
-      name = "rams";
-      source = "https://github.com/brianlovin/claude-config";
-    }
-    {
       name = "agent-browser";
       source = "https://github.com/vercel-labs/agent-browser";
-    }
-    {
-      name = "frontend-design";
-      source = "https://github.com/anthropics/skills";
-    }
-    {
-      name = "next-best-practices";
-      source = "https://github.com/vercel-labs/next-skills";
-    }
-    {
-      name = "turborepo";
-      source = "https://github.com/vercel/turborepo";
     }
   ];
 }
