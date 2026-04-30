@@ -2,7 +2,7 @@
 set -euo pipefail
 
 handle="$1"
-flake_ref="${FLAKE_REF:-github:getcompanion-ai/computer-nix#computer}"
+flake_ref="${FLAKE_REF:-github:AgentComputerAI/computer-nix#computer}"
 
 echo "==> target: $handle"
 echo "==> flake:  $flake_ref"

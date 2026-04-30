@@ -3,11 +3,11 @@
   "root": "~/work",
   "repos": [
     {
-      "repo": "getcompanion-ai/computer-nix",
+      "repo": "AgentComputerAI/computer-nix",
       "branch": "main"
     },
     {
-      "repo": "getcompanion-ai/some-other-repo",
+      "repo": "AgentComputerAI/some-other-repo",
       "dest": "~/work/other",
       "branch": "main",
       "depth": 1

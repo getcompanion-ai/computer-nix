@@ -19,7 +19,7 @@ computer login
 ### 2. Fork the template
 
 ```
-gh repo create my-computer-nix --template getcompanion-ai/computer-nix --public --clone
+gh repo create my-computer-nix --template AgentComputerAI/computer-nix --public --clone
 cd my-computer-nix
 cp .env.example .env
 ```

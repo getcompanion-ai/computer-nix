@@ -1,6 +1,6 @@
 ## Computer Nix
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/getcompanion-ai/computer-nix)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/AgentComputerAI/computer-nix)
 
 <img width="auto" height="auto" alt="computer-nix" src="https://github.com/user-attachments/assets/332ca256-2707-46af-b593-e5e3071a2263" />
 
@@ -11,7 +11,7 @@ One command — `just go` — picks a box, applies your flake, pushes gh/agent a
 ## Quickstart
 
 ```
-gh repo create my-computer-nix --template getcompanion-ai/computer-nix --public --clone
+gh repo create my-computer-nix --template AgentComputerAI/computer-nix --public --clone
 cd my-computer-nix
 cp .env.example .env
 computer create mybox
